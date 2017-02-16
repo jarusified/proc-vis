@@ -1,0 +1,28 @@
+{
+  "name": "proc-vis",
+  "version": "1.0.0",
+  "description": "Visualisation for process management",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jarusified/proc-vis.git"
+  },
+  "keywords": [
+    "Visualisation",
+    "hive",
+    "plot",
+    "memory",
+    "process",
+    "linux",
+    "mac."
+  ],
+  "author": "Suraj Kesavan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jarusified/proc-vis/issues"
+  },
+  "homepage": "https://github.com/jarusified/proc-vis#readme"
+}
