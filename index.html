@@ -21,14 +21,16 @@
 var width = window.innerWidth,
     height = window.innerHeight,
     innerRadius = 0,
-    outerRadius = window.innerWidth/4;
+    outerRadius = window.innerWidth/4,
+    numberOfAxis = 4;
 
-console.log(outerRadius);
+console.log("Radius : " + outerRadius);
 
-var angle = d3.scale.ordinal().domain(d3.range(4)).rangePoints([0, 2 * Math.PI]),
+var angle = d3.scale.ordinal().domain(d3.range(numberOfAxis+1)).rangePoints([0, 2 * Math.PI]),
     radius = d3.scale.linear().range([innerRadius, outerRadius]),
     color = d3.scale.category10().domain(d3.range(20));
 
+console.log(angle);
 var nodes = [
   {x: 0, y: .1},
   {x: 0, y: .9},
@@ -38,7 +40,6 @@ var nodes = [
   {x: 2, y: .8},
   {x: 3, y: .6},
   {x: 3, y: .4}
-    
 ];
 
 var links = [
@@ -58,7 +59,7 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
 svg.selectAll(".axis")
-    .data(d3.range(3))
+    .data(d3.range(numberOfAxis))
   .enter().append("line")
     .attr("class", "axis")
     .attr("transform", function(d) { return "rotate(" + degrees(angle(d)) + ")"; })
