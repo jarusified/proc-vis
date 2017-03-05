@@ -29,9 +29,12 @@ function getStats(pids){
     for(var pid = 0; pid < pids.length; pid++){
 	//console.log(pids[pid]);
 	var process = procfs(pids[pid]);
-	procfs.meminfo(function(err, io){
-	    //console.log(io);
+	process.stat(function(res){
+	    console.log(res);
 	});
+	/*procfs.meminfo(function(err, io){
+	    //console.log(io);
+	});*/
     }
 }
 
