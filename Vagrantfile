@@ -11,6 +11,5 @@ Vagrant.configure(2) do |config|
     vb.name = "proc-vis"
   end
 
-  config.vm.network "private_network" "192.168.1.0"
-
+  config.vm.network "private_network", ip: "10.0.0.5"
 end

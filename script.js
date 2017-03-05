@@ -3,10 +3,9 @@ var fs = require("fs");
 var procfs = require("procfs-stats");
 var process = require("process");
 var http = require("http");
-var port = process.env.PORT || 8000;
+var port = process.env.PORT || 8001;
 var file = fs.readFileSync("index.html");
 var io = require("socket.io").listen(server, {log: true});
-var ip = "192.168.1.0";
 
 var processList = [];
 ps().then(function(res){
@@ -18,15 +17,17 @@ ps().then(function(res){
 
 function getStats(pids){
     for(var pid = 0; pid < pids.length; pid++){
-	console.log(pids[pid]);
+	//console.log(pids[pid]);
 	var process = procfs(pids[pid]);
 	procfs.meminfo(function(err, io){
-	    console.log(io);
+	    //console.log(io);
 	});
     }
 }
 
 var server = http.createServer(function(req, res){
-    res.writeHead(200, '{Content-Type: text/html}');
-    res.write(file);
-}).listen(port, ip);
+    // Wow never use res.write without headers
+    res.setHeader('Content-Type', 'text/html');
+    console.log(file);
+    res.end(file);
+}).listen(port);
