@@ -1,5 +1,6 @@
 <html>
-<meta charset="utf-8">
+  <meta charset="utf-8">
+  <link rel="icon" href="data:;base64,=">
 <style>
 
 .link {
@@ -14,8 +15,10 @@
 
 </style>
 <body>
+<script src="socket.io.js"></script>
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="hive.js"></script>
+<script src="three.min.js"></script>
 <script>
 
 var width = window.innerWidth,
@@ -24,7 +27,65 @@ var width = window.innerWidth,
     outerRadius = window.innerWidth/4,
     numberOfAxis = 4;
 
-console.log("Radius : " + outerRadius);
+var scene, camera, renderer;
+
+function init(){
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(70, width/height, 1, 10000);
+    camera.position.z = 1000;
+    scene.add(camera);
+    
+    scene.add(new THREE.AmbientLight(0xf0f0f0));
+    var light = new THREE.SpotLight(0xffffff, 1.5);
+    light.position.set(0, 1500, 200);
+    light.castShadow = true;
+    light.shadow = new THREE.LightShadow(new THREE.PerspectiveCamera(70, 1, 200, 2000));
+    light.shadow.bias = -0.000222;
+    light.shadow.mapSize.width = 1024;
+    light.shadow.mapSize.height = 1024;
+    spotlight = light;
+
+    var planeGeometry = new THREE.PlaneGeometry(2000, 2000);
+    planeGeometry.rotateX( -Math.PI/2);
+    var planeMaterial = new THREE.ShadowMaterial();
+    planeMaterial.opacity = 0.2;
+
+    var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.position.y = -200;
+    plane.receiveShadow = true;
+    scene.add(plane);
+
+    var helper = new THREE.GridHelper( 2000, 100 );
+    helper.position.y = - 199;
+    helper.material.opacity = 0.25;
+    helper.material.transparent = true;
+    scene.add( helper );
+
+    var axis = new THREE.AxisHelper();
+    axis.position.set(-500, -500, -500);
+    scene.add(axis);
+
+    console.log(scene);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setClearColor(0xf0f0f0);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(width, height);
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+}
+
+function render(){
+    requestAnimationFrame(render);
+    renderer.render(scene, camera);
+}
+
+init();
+render();
+
+var socket = io.connect(window.location.href);
+socket.on("update", function(data){
+console.log(data);
+});
 
 var angle = d3.scale.ordinal().domain(d3.range(numberOfAxis+1)).rangePoints([0, 2 * Math.PI]),
     radius = d3.scale.linear().range([innerRadius, outerRadius]),

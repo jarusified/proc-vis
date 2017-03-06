@@ -6,7 +6,6 @@ var ps = require("ps-list");
 var procfs = require("procfs-stats");
 var process = require("process");
 var port = process.env.PORT || 8000;
-var io = require("socket.io").listen(server, {log: true});
 
 var file = fs.readFileSync("index.html");
 var mimeTypes = {
@@ -26,17 +25,15 @@ ps().then(function(res){
 });
 
 function getStats(pids){
-    for(var pid = 0; pid < pids.length; pid++){
-	//console.log(pids[pid]);
+    console.log(pids);
+    for(var pid = 0; pid < 3; pid++){
 	var process = procfs(pids[pid]);
-	process.stat(function(res){
-	    console.log(res);
+	process.statm(function(err, data){
+	   //console.log(data);
 	});
-	/*procfs.meminfo(function(err, io){
-	    //console.log(io);
-	});*/
     }
 }
+
 
 var server = http.createServer(function(req, res){
     // Wow never use res.write without headers
@@ -57,3 +54,11 @@ var server = http.createServer(function(req, res){
     });;
 
 }).listen(port);
+
+var io = require("socket.io").listen(server, {log: true});
+
+io.sockets.on('connection', function (socket) {
+    socket.on('process', function (data) {
+	io.sockets.emit('update', data);
+    });
+});
