@@ -25,7 +25,6 @@ ps().then(function(res){
 });
 
 function getStats(pids){
-    console.log(pids);
     for(var pid = 0; pid < 3; pid++){
 	var process = procfs(pids[pid]);
 	process.statm(function(err, data){

@@ -19,6 +19,10 @@
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script src="hive.js"></script>
 <script src="three.min.js"></script>
+<script src="DragControls.js"></script>
+<script src="OrbitControls.js"></script>
+<script src="TransformControls.js"></script>
+
 <script>
 
 var width = window.innerWidth,
@@ -65,13 +69,48 @@ function init(){
     axis.position.set(-500, -500, -500);
     scene.add(axis);
 
-    console.log(scene);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setClearColor(0xf0f0f0);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls( camera, renderer.domElement );
+    controls.damping = 0.2;
+    controls.addEventListener( 'change', render );
+    transformControl = new THREE.TransformControls( camera, renderer.domElement );
+    transformControl.addEventListener( 'change', render );
+    scene.add( transformControl );
+
+    
+    transformControl.addEventListener( 'change', function( e ) {
+	cancelHideTransorm();
+    } );
+    transformControl.addEventListener( 'mouseDown', function( e ) {
+	cancelHideTransorm();
+    } );
+    transformControl.addEventListener( 'mouseUp', function( e ) {
+	delayHideTransform();
+    } );
+    transformControl.addEventListener( 'objectChange', function( e ) {
+	updateSplineOutline();
+    } );
+    var dragcontrols = new THREE.DragControls( camera, renderer.domElement ); //
+    dragcontrols.enabled = false;
+    dragcontrols.addEventListener( 'hoveron', function ( event ) {
+	transformControl.attach( event.object );
+	cancelHideTransorm();
+    } );
+    dragcontrols.addEventListener( 'hoveroff', function ( event ) {
+	delayHideTransform();
+    } );
+    controls.addEventListener( 'start', function() {
+	cancelHideTransorm();
+    } );
+    controls.addEventListener( 'end', function() {
+	delayHideTransform();
+    } );
 }
 
 function render(){
