@@ -12,4 +12,5 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.network "private_network", ip: "10.0.0.5"
+  config.vm.provision "file", source: "/Users/jarus/.emacs.d" ,destination:"/home/ubuntu/.emacs.d"
 end
