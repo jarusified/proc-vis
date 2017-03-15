@@ -23,11 +23,11 @@
 <script>
 
 		
-var container, stats;
+var container;
 var camera, scene, renderer;
 var positions = [];
 
-var geometry = new THREE.BoxGeometry( 20, 20, 20 );
+var structure = new THREE.BoxGeometry( 20, 20, 20 );
 
 init();
 animate();
@@ -164,6 +164,51 @@ function init() {
     function cancelHideTransorm() {
 	if ( hiding ) clearTimeout( hiding );
     }
+
+    addNode();
+    var base = addBase(60);
+    base.computeLineDistances();
+    var object = new THREE.LineSegments(base, new THREE.LineDashedMaterial({ color: 0xffaa00, dashSize: 3, gapSize: 0, lineWidth: 2}));
+    scene.add(object);
+}
+
+var nodeCount =0;
+
+function addLine(from, to){
+    
+}
+
+function addBase(size){
+    var h = size*0.5;
+    var geometry = new THREE.Geometry();
+
+    geometry.vertices.push(
+	new THREE.Vector3( -h, -h, -h ),
+	new THREE.Vector3( -h, h, -h ),
+	new THREE.Vector3( -h, h, -h ),
+	new THREE.Vector3( h, h, -h )
+    );
+    return geometry;
+}
+
+function addNode(pos){
+    nodeCount++;
+    var node = new THREE.Mesh(structure, new THREE.MeshLambertMaterial({
+	color: Math.random()* 0xffffffff
+    }));
+    node.material.ambient = node.material.color;
+    if(pos){
+	node.position.copy(pos);
+    }
+    else{
+	node.position.x = Math.random()*1000 -500;
+	node.position.y = Math.random()*600;
+	node.position.z = Math.random()*700 - 400;
+    }
+    node.castshadow = true;
+    node.receiveshadow = true;
+    scene.add(node);
+    return node;
 }
 
 function animate() {
