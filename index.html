@@ -40,7 +40,7 @@ function init() {
     camera.position.z = 1000;
     scene.add( camera );
 
-    scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+    scene.add( new THREE.AmbientLight( 0x2c9ada ) );
     var light = new THREE.SpotLight( 0xffffff, 1.5 );
     light.position.set( 0, 1500, 200 );
     light.castShadow = true;
@@ -92,12 +92,6 @@ function init() {
 
     var material = new THREE.SpriteMaterial( {
 	color: 0xff00ff,
-	program: function ( context ) {
-	    console.log("context");
-	    context.beginPath();
-	    context.arc( 0, 0, 0.5, 0, PI2, true );
-	    context.fill();
-	}
     });
     
     var structure = new THREE.Geometry();
@@ -106,9 +100,6 @@ function init() {
     particle.position.set(50,50,90);
     scene.add(particle);
 
-    console.log(scene);
-    console.log(particle.position);
-
     structure.vertices.push(particle.position);
 
     var curve = new THREE.CatmullRomCurve3(positions);
@@ -116,7 +107,6 @@ function init() {
     var line = new THREE.Line( structure, new THREE.LineBasicMaterial( { color: 0x000000, opacity: 0.5, linewidth: 2 } ) );
     scene.add(line);
     
-    // Hiding transform situation is a little in a mess :()
     transformControl.addEventListener('change',function(e){
 	cancelHideTransorm();
     });
@@ -149,7 +139,6 @@ function init() {
     } );
 
     var hiding;
-
     function delayHideTransform() {
 	cancelHideTransorm();
 	hideTransform();
@@ -166,9 +155,9 @@ function init() {
     }
 
     addNode();
-    var base = addBase(60);
+    var base = addBase(500);
     base.computeLineDistances();
-    var object = new THREE.LineSegments(base, new THREE.LineDashedMaterial({ color: 0xffaa00, dashSize: 3, gapSize: 0, lineWidth: 2}));
+    var object = new THREE.LineSegments(base, new THREE.LineDashedMaterial({ color: 0x0000ff, gapSize: 0, lineWidth: 10}));
     scene.add(object);
 }
 
@@ -179,14 +168,22 @@ function addLine(from, to){
 }
 
 function addBase(size){
-    var h = size*0.5;
+    var h = size*1;
     var geometry = new THREE.Geometry();
 
+    var angle = [0, 120, 240 ]
+    var basez = 200;
     geometry.vertices.push(
-	new THREE.Vector3( -h, -h, -h ),
-	new THREE.Vector3( -h, h, -h ),
-	new THREE.Vector3( -h, h, -h ),
-	new THREE.Vector3( h, h, -h )
+	new THREE.Vector3( 0, h, 0 ),
+	new THREE.Vector3( 0, 0, 0),
+	new THREE.Vector3( -h*Math.cos(angle[0]), -0.3*h, -h*Math.sin(angle[0])),
+	new THREE.Vector3( 0, 0, 0),
+	new THREE.Vector3( h*Math.cos(angle[1]), -0.3*h, h*Math.sin(angle[1])),
+	new THREE.Vector3( 0, 0, 0),
+	new THREE.Vector3( -h*Math.cos(angle[2]), -0.3*h,  -h*Math.sin(angle[2])),
+	new THREE.Vector3( 0, 0, 0)
+	
+			  
     );
     return geometry;
 }
