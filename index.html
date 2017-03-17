@@ -157,6 +157,7 @@ function init() {
     //addNode();
     addBase(500);
     var nodeCount = 0;
+    var lines = [];
 
     function addLine(from, to, clr){	
 	var geometry = new THREE.Geometry();
@@ -164,10 +165,8 @@ function init() {
 	    new THREE.Vector3(from.x, from.y, from.z),
 	    new THREE.Vector3(to.x, to.y, to.z)
 	);
-	console.log(from, to);
 	geometry.computeLineDistances();
 	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0}));
-	console.log(line);
 	scene.add(line);
     }
 
@@ -181,18 +180,19 @@ function init() {
 	}
 	return obj;
     }
-
+    
     function addBase(size){
 	var h = size*1;
-
-	var angle = [0, 120, 240 ]
+	var users = 3;
+	var angle = [];
+	for(var i=0;i<users;i++){
+	    angle.push(i*(360/users));
+	}
 	var basez = 200;
-	addLine(strtoobj("0,"+h+",0"), strtoobj("0,0,0"), 0x000000);
+	addLine(strtoobj("0, 0, 0"), strtoobj("0,"+h+",0"), 0x000000);
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[0])+","+ -0.3*h+ ","+ -h*Math.sin(angle[0])), 0xff00aa);
 	addLine(strtoobj("0, 0, 0"), strtoobj( h*Math.cos(angle[1])+","+ -0.3*h+ ","+  h*Math.sin(angle[1])), 0xaa00ff);
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff);
-	
-	//return geometry;
     }
 
     function addNode(pos){
