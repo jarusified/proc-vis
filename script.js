@@ -6,6 +6,7 @@ var ps = require("ps-list");
 var procfs = require("procfs-stats");
 var process = require("process");
 var port = process.env.PORT|| 8080;
+var q = require("q");
 
 var mimeTypes = {
     "html": "text/html",
@@ -15,29 +16,52 @@ var mimeTypes = {
     "js": "text/javascript",
     "css": "text/css"};
 
-var processList = [];
-ps().then(function(res){
-    for(var i = 0; i < res.length; i++){
-	processList.push(res[i].pid);
-    }
-    getStats(processList)
-});
+var pidList = [];
+var pidData = {};
 
-function getStats(pids){
-    for(var pid = 0; pid < 3; pid++){
-	var process = procfs(pids[pid]);
-	process.statm(function(err, data){
-	   //console.log(data);
+var getData = function(res){
+    var deferred = q.defer();
+    pidData.length = res.length;
+    pidData.processes = [];
+    i = 0;
+    while(i<res.length){
+	getMemStat(res[i].pid).then(function(mem){
+	    pidData.pid = res[i].pid;
+	    pidData["pid"]["mem"] = mem;
 	});
+	//pidData.processes.pusH({ pid: res[i].pid});
+	i++;
     }
+    deferred.resolve(pidData);
+    return deferred.promise;
 }
+
+var getMemStat = function(pid){
+    var deferred = q.defer();
+    var process = procfs(pid);
+    process.statm(function(err, data){
+	pidData.a = data;
+	pidData.processes.push(data);
+	deferred.resolve(data);
+    });
+    return deferred.promise;
+}
+
+ps().then(function(res){
+    console.log("entry");
+    getData(res).then(function(data){
+	io.sockets.on('connection', function (socket) {
+	    io.sockets.emit('position', data);
+	});
+	console.log("resolved");
+    });
+});
 
 
 var server = http.createServer(function(req, res){
     // Wow never use res.write without headers
     var uri = url.parse(req.url).pathname
     var filename = path.join(process.cwd(), uri);
-    console.log(filename);
     fs.exists(filename, function(exists){
 	if(!exists){
 	    console.log("[404]" + filename);
@@ -55,13 +79,6 @@ var server = http.createServer(function(req, res){
 
 var io = require("socket.io").listen(server, {log: true});
 
-var data = {x:30, y:30};
-io.sockets.on('connection', function (socket) {
-    console.log("asd");
-    io.sockets.emit('position', { x:30, y:30});
-});
 
 setTimeout(function(){
-    console.log("timeout");
-    io.sockets.emit('position', { x:30, y:30});
 },3000);
