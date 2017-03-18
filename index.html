@@ -15,7 +15,7 @@
 
 </style>
 <body>
-<script src="socket.io.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script src="three.min.js"></script>
 <script src="DragControls.js"></script>
 <script src="OrbitControls.js"></script>
@@ -159,10 +159,8 @@ function init() {
     var nodeCount = 0;
     var lines = [];
 
-    var socket = io.connect(window.location.href);
-
-    console.log(socket);
-    socket.on("position",function(data){
+    var socket = io();
+    socket.on('position',function(data){
 	console.log(data);
     });
 

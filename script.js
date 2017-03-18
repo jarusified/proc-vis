@@ -58,5 +58,10 @@ var io = require("socket.io").listen(server, {log: true});
 var data = {x:30, y:30};
 io.sockets.on('connection', function (socket) {
     console.log("asd");
-    io.sockets.emit('position', "a");
+    io.sockets.emit('position', { x:30, y:30});
 });
+
+setTimeout(function(){
+    console.log("timeout");
+    io.sockets.emit('position', { x:30, y:30});
+},3000);
