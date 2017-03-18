@@ -11,6 +11,6 @@ Vagrant.configure(2) do |config|
     vb.name = "proc-vis"
   end
 
-  config.vm.network "private_network", ip: "10.0.0.5"
+  config.vm.network "forwarded_port", guest: 8080, host: 8000, auto_correct: true
   config.vm.provision "file", source: "/Users/jarus/.emacs.d" ,destination:"/home/ubuntu/.emacs.d"
 end
