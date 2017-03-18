@@ -5,9 +5,8 @@ var path  = require("path");
 var ps = require("ps-list");
 var procfs = require("procfs-stats");
 var process = require("process");
-var port = process.env.PORT || 8001;
+var port = process.env.PORT|| 8080;
 
-var file = fs.readFileSync("index.html");
 var mimeTypes = {
     "html": "text/html",
     "jpeg": "image/jpeg",
