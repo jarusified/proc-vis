@@ -55,8 +55,8 @@ var server = http.createServer(function(req, res){
 
 var io = require("socket.io").listen(server, {log: true});
 
+var data = {x:30, y:30};
 io.sockets.on('connection', function (socket) {
-    socket.on('process', function (data) {
-	io.sockets.emit('update', data);
-    });
+    console.log("asd");
+    io.sockets.emit('position', "a");
 });

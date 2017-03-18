@@ -159,6 +159,13 @@ function init() {
     var nodeCount = 0;
     var lines = [];
 
+    var socket = io.connect(window.location.href);
+
+    console.log(socket);
+    socket.on("position",function(data){
+	console.log(data);
+    });
+
     function addLine(from, to, clr){	
 	var geometry = new THREE.Geometry();
 	geometry.vertices.push(
@@ -172,7 +179,6 @@ function init() {
 
     function strtoobj(str){
 	var props = str.split(",");
-	console.log(props);
 	var obj = {};
 	var axis = ["x","y","z"];
 	for(var i=0;i<props.length;i++){
