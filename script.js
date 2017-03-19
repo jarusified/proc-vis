@@ -25,38 +25,52 @@ var getData = function(res){
     pidData.processes = [];
     i = 0;
     while(i<res.length){
-	getMemStat(res[i].pid).then(function(mem){
-	    pidData.pid = res[i].pid;
-	    pidData["pid"]["mem"] = mem;
+	getStat(res[i].pid).then(function(){
+	    
 	});
-	//pidData.processes.pusH({ pid: res[i].pid});
 	i++;
     }
     deferred.resolve(pidData);
     return deferred.promise;
 }
 
-var getMemStat = function(pid){
+var getStat = function(pid){
     var deferred = q.defer();
     var process = procfs(pid);
+    var proces  = [];
+    var memory = []
+    var cwd = [];
+    var argv = [];
     process.statm(function(err, data){
-	pidData.a = data;
-	pidData.processes.push(data);
-	deferred.resolve(data);
+	memory.push(data);
     });
+    process.stat(function(err,data){
+	proces.push(data);
+    });
+    process.cwd(function(err, data){
+	cwd.push(data);
+    });
+    process.argv(function(err, data){
+	argv.push(data);
+    });
+    pidData.processes.push({pid: pid, argv: argv, mem_stats: memory, process_stats: proces, dir: cwd});
+    deferred.resolve();
     return deferred.promise;
 }
 
-ps().then(function(res){
-    console.log("entry");
-    getData(res).then(function(data){
-	io.sockets.on('connection', function (socket) {
-	    io.sockets.emit('position', data);
+var monitor = function(){
+    ps().then(function(res){
+	console.log("entry");
+	getData(res).then(function(data){
+	    io.sockets.on('connection', function (socket) {
+		io.sockets.emit('position', data);
+	    });
+	    console.log("resolved");
 	});
-	console.log("resolved");
     });
-});
+}
 
+setInterval(monitor, 1000);
 
 var server = http.createServer(function(req, res){
     // Wow never use res.write without headers
