@@ -26,7 +26,7 @@
 var container;
 var camera, scene, renderer;
 var positions = [];
-
+var lineDistance;
 var structure = new THREE.BoxGeometry( 20, 20, 20 );
 
 init();
@@ -51,9 +51,7 @@ function init() {
     scene.add( light );
     spotlight = light;
 
-    // scene.add( new THREE.CameraHelper( light.shadow.camera ) );
-
-    var planeGeometry = new THREE.PlaneGeometry( 2000, 2000 );
+    var planeGeometry = new THREE.PlaneGeometry( 4000, 4000 );
     planeGeometry.rotateX( - Math.PI / 2 );
     var planeMaterial = new THREE.ShadowMaterial();
     planeMaterial.opacity = 0.2;
@@ -63,7 +61,7 @@ function init() {
     plane.receiveShadow = true;
     scene.add( plane );
 
-    var helper = new THREE.GridHelper( 2000, 100 );
+    var helper = new THREE.GridHelper( 4000, 100 );
     helper.position.y = - 199;
     helper.material.opacity = 0.25;
     helper.material.transparent = true;
@@ -81,7 +79,6 @@ function init() {
     renderer.shadowMap.enabled = true;
     container.appendChild( renderer.domElement );
 
-    // Controls
     controls = new THREE.OrbitControls( camera, renderer.domElement );
     controls.damping = 0.2;
     controls.addEventListener( 'change', render );
@@ -155,23 +152,29 @@ function init() {
     }
 
 //addNode();
-    addBase(500);
+    addBase(1000);
     var nodeCount = 0;
     var lines = [];
 
     var socket = io();
     socket.on('position',function(data){
-	console.log(data);
 	process(data);
     });
 
     function process(data){
+	count = 0;
 	for(var i=0; i<data.length; i++){
-	    addNode();
+	    if(data.processes[i]["mem_stats"][0]["size"] != undefined && data.processes[i]["mem_stats"][0]["size"] !=0 ){
+		console.log(data.processes[i]["argv"].join(" "));
+		console.log(data.processes[i]["pid"] +":"+ data.processes[i]["mem_stats"][0]["size"]/1024);
+		count++;
+		offset = data.processes[i]["mem_stats"][0]["size"]/(1024*1024)*Math.exp(3);;
+		addNode(new THREE.Vector3(offset*lineDistance*Math.cos(120), -0.3*offset*lineDistance*Math.cos(120), offset*lineDistance*Math.sin(120)));
+	    }
 	}
+	console.log(count);
     }
-    
-    var geometry = new THREE.Geometry();
+
     function addLine(from, to, clr){	
 	var geometry = new THREE.Geometry();
 	geometry.vertices.push(
@@ -179,10 +182,11 @@ function init() {
 	    new THREE.Vector3(to.x, to.y, to.z)
 	);
 	geometry.computeLineDistances();
+	lineDistance = geometry.lineDistances[1];
 	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0}));
 	scene.add(line);
     }
-
+    
     function strtoobj(str){
 	var props = str.split(",");
 	var obj = {};
@@ -200,19 +204,18 @@ function init() {
 	for(var i=0;i<users;i++){
 	    angle.push(i*(360/users));
 	}
-	var basez = 200;
 	addLine(strtoobj("0, 0, 0"), strtoobj("0,"+h+",0"), 0x000000);
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[0])+","+ -0.3*h+ ","+ -h*Math.sin(angle[0])), 0xff00aa);
 	addLine(strtoobj("0, 0, 0"), strtoobj( h*Math.cos(angle[1])+","+ -0.3*h+ ","+  h*Math.sin(angle[1])), 0xaa00ff);
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff);
     }
 
-    addNode(new THREE.Vector3( 289.76843686945404, 452.51481137238443, 56.10018915737797 ));
+
     function addNode(pos){
 	nodeCount++;
-	var sphereGeometry = new THREE.SphereGeometry(10,20,10);
+	var sphereGeometry = new THREE.SphereGeometry(2,0,0);
 	var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
-	    color: Math.random()* 0x00aaff
+	    color: 0xff0000
 	}));
 	node.material.ambient = node.material.color;
 	if(pos){
@@ -232,7 +235,6 @@ function init() {
 
 }
 
-
 function animate() {
     requestAnimationFrame( animate );
     render();
@@ -244,6 +246,6 @@ function render() {
     renderer.render( scene, camera );
 }
 
-	</script>
+</script>
 </body>
 </html>
