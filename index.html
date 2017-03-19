@@ -154,7 +154,7 @@ function init() {
 	if ( hiding ) clearTimeout( hiding );
     }
 
-    //addNode();
+//addNode();
     addBase(500);
     var nodeCount = 0;
     var lines = [];
@@ -162,8 +162,16 @@ function init() {
     var socket = io();
     socket.on('position',function(data){
 	console.log(data);
+	process(data);
     });
 
+    function process(data){
+	for(var i=0; i<data.length; i++){
+	    addNode();
+	}
+    }
+    
+    var geometry = new THREE.Geometry();
     function addLine(from, to, clr){	
 	var geometry = new THREE.Geometry();
 	geometry.vertices.push(
@@ -199,10 +207,12 @@ function init() {
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff);
     }
 
+    addNode(new THREE.Vector3( 289.76843686945404, 452.51481137238443, 56.10018915737797 ));
     function addNode(pos){
 	nodeCount++;
-	var node = new THREE.Mesh(structure, new THREE.MeshLambertMaterial({
-	    color: Math.random()* 0xffffffff
+	var sphereGeometry = new THREE.SphereGeometry(10,20,10);
+	var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+	    color: Math.random()* 0x00aaff
 	}));
 	node.material.ambient = node.material.color;
 	if(pos){
@@ -218,6 +228,7 @@ function init() {
 	scene.add(node);
 	return node;
     }
+    console.log(scene);
 
 }
 
