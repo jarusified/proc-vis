@@ -31,6 +31,8 @@ var structure = new THREE.BoxGeometry( 20, 20, 20 );
 var pidText = document.createElement('canvas');
 pidText.width = 16;
 pidText.height = 16;
+var content = document.createElement("div");
+
 init();
 animate();
 
@@ -91,17 +93,20 @@ function init() {
     controls.addEventListener( 'change', render );
 
     var eventsControl = new EventsControls(camera, renderer.domElement);
+    plane.title = "mesh";
+    plane.name = "plane";
     eventsControl.attach(plane);
     eventsControl.map = plane;
     eventsControl.offsetUse = true;
 
     eventsControl.attachEvent("onclick", function(){
-	console.log(this);
-	appendHTML(this.focused.name, {top: "100px", left: "170px"});
-    });
-    eventsControl.attachEvent("mouseOver", function(){
-//	console.log(this)
-//	appendHTML(e.focused.name, {top: "100px", left: "150px"});
+	var title = this.focused.title;
+	if(title === "axis"){
+	    userData(this.focused.name);
+	}
+	else if(title === "pid"){
+	    pidData(this.focused.name);
+	}
     });
     
     transformControl = new THREE.TransformControls( camera, renderer.domElement );
@@ -160,22 +165,35 @@ function init() {
     var lines = [];
 
     var socket = io();
+    var source;
     socket.on('position',function(data){
 	process(data);
-	console.log(data);
+	source = data;
+	appendHTMLforever("Number of proceses : "+ source.length + "<br/>", "pcount", { top : "70px", left : "50px" });
     });
 
-    function appendHTML(html, css){
-	var content = document.createElement("div");
+    function appendHTML(html, id, css){
+	content.innerHTML = "";
+	content.id = id;
 	content.style.position = "absolute";
 	content.style.top =  css.top;
 	content.style.left = css.left;
 	content.innerHTML = html;
+	console.log("html:", html);
 	container.appendChild(content);
     }
 
-    function roundRect(ctx, x, y, w, h, r)
-    {
+    function appendHTMLforever(html, id, css){
+	var freeze = document.createElement("div");
+	freeze.id = id;
+	freeze.style.position = "absolute";
+	freeze.style.top =  css.top;
+	freeze.style.left = css.left;
+	freeze.innerHTML = html;
+	container.appendChild(freeze);
+    }
+
+    function roundRect(ctx, x, y, w, h, r){
 	ctx.beginPath();
 	ctx.moveTo(x+r, y);
 	ctx.lineTo(x+w-r, y);
@@ -198,26 +216,18 @@ function init() {
 	    parameters["fontface"] : "Arial";
 	var fontsize = parameters.hasOwnProperty("fontsize") ?
 	    parameters["fontsize"] : 18;
-
 	var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
 	    parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };;
-
 	var canvas = document.createElement('canvas');
 	var context = canvas.getContext('2d');
 	context.font = "Bold " + fontsize + "px " + fontface;
-
-	// get size data (height depends only on font size)
 	var metrics = context.measureText( message );
 	var textWidth = metrics.width;
-
-	// background color
 	context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + ","
 	    + backgroundColor.b + "," + backgroundColor.a + ")";
-	
 	roundRect(context, 0, 0, textWidth, fontsize * 1.4, 6);
 	context.fillStyle = "rgba(0, 0, 0, 1.0)";
 	context.fillText( message, 0, fontsize);
-
 	var texture = new THREE.Texture(canvas)
 	texture.needsUpdate = true;
 	var spriteMaterial = new THREE.SpriteMaterial(
@@ -234,7 +244,6 @@ function init() {
     }
 
     function process(data){
-	count = 0;
 	var node;
 	for(var i=0; i<data.length; i++){
 	    var memory = data.processes[i]["mem_stats"][0]["size"];
@@ -244,13 +253,9 @@ function init() {
 	    if(memory != undefined && memory!= null && memory!=0 ){
 //		console.log(data.processes[i]["argv"].join(" "));
 //		console.log(data.processes[i]["pid"] +":"+ data.processes[i]["mem_stats"][0]["size"]/1024);
-		count++;
-		node = addNode(pid, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
-	    }
-	    node.name = 'nodes';
-	    eventsControl.attach(node);
+		node = addNode(pid,memory, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
+	    };
 	}
-	console.log(count);
     }
     
     function addLine(from, to, clr, name){	
@@ -262,6 +267,7 @@ function init() {
 	geometry.computeLineDistances();
 	lineDistance = geometry.lineDistances[1];
 	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0}));
+	line.title = "axis";
 	line.name = name;
 	eventsControl.attach(line);
 	scene.add(line);
@@ -285,16 +291,15 @@ function init() {
 	    angle.push(i*(360/users));
 	}
 	addLine(strtoobj("0, 0, 0"), strtoobj("0,"+h+",0"), 0x000000, "ROOT");
-	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[0])+","+ -0.3*h+ ","+ -h*Math.sin(angle[0])), 0xff00aa, "User!");
+	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[0])+","+ -0.3*h+ ","+ -h*Math.sin(angle[0])), 0xff00aa, "User1");
 	addLine(strtoobj("0, 0, 0"), strtoobj( h*Math.cos(angle[1])+","+ -0.3*h+ ","+  h*Math.sin(angle[1])), 0xaa00ff, "User2");
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff, "User3");
     }
 
-    var node;
-    function addNode(pid, pos){
+    function addNode(pid, mem,  pos){
 	nodeCount++;
-	var sphereGeometry = new THREE.SphereGeometry(0.1,0,0);
-	node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+	var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
 	    color: 0xff0000
 	}));
 	node.material.ambient = node.material.color;
@@ -304,11 +309,27 @@ function init() {
 	node.castshadow = true;
 	node.receiveshadow = true;
 	//if(nodeCount < 2) append3DHTML(pid, pos);
+	node.title = "pid";
+	node.name = pid;
+	eventsControl.attach(node);
 	scene.add(node);
 	return node;
     }
 
-    appendHTML(" Process Visualisation </div>", { top : "50px", left: "50px" });
+    function pidData(pid){
+	for(var i = 0; i<source.length; i++){
+	    var ps = source.processes[i];
+	    if(ps["pid"] === pid){
+		console.log(ps["pid"]);
+		var html = "Memory : "+ Math.round(ps["mem_stats"][0].size/1024) + " mB <br/>" +
+		    "Command :" + ps["argv"].join(" ").replace(","," ")  + " <br/>" +
+		    "Resident set memory size: "+ Math.round(ps["process_stats"][0].rss) + " kB <br/>";
+							     
+		appendHTML(html, "pid", { top: "90px", left: "50px", constant: "false"});
+	    }
+	}
+    }
+    appendHTMLforever("Process Visualisation","title", { top : "50px", left: "50px" });
 }
 
 function animate() {

@@ -67,7 +67,7 @@ var monitor = function(){
     });
 }
 
-setInterval(monitor, 1000);
+setTimeout(monitor, 1000);
 
 var server = http.createServer(function(req, res){
     // Wow never use res.write without headers
