@@ -250,10 +250,16 @@ function init() {
 	    var scale = (1024*1024)*Math.exp(1);
 	    var scaled_mem = memory/scale;
 	    var pid = data.processes[i]["pid"];
-	    if(memory != undefined && memory!= null && memory!=0 ){
+	    if(memory != undefined && memory!= null ){
 //		console.log(data.processes[i]["argv"].join(" "));
 //		console.log(data.processes[i]["pid"] +":"+ data.processes[i]["mem_stats"][0]["size"]/1024);
-		node = addNode(pid,memory, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
+		if(memory==0){
+		    console.log("asddds");
+		    node = addNode(pid, memory, new THREE.Vector3(0.1*Math.random()*lineDistance*Math.cos(120), - 0.1*lineDistance*Math.cos(120),0.1*Math.random()*lineDistance*Math.sin(120)));
+		}
+		else{
+		    node = addNode(pid,memory, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
+		}
 	    };
 	}
     }
@@ -298,10 +304,25 @@ function init() {
 
     function addNode(pid, mem,  pos){
 	nodeCount++;
-	var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
-	var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
-	    color: 0xff0000
-	}));
+	console.log(mem);
+	if(mem == 0){
+	    var sphereGeometry = new THREE.SphereGeometry(1,0,0);
+	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+		color: 0x0000ff
+	    }));
+	}
+	else if(mem >102400){
+	    var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+		color: 0xff0000
+	    }));
+	}
+	else{
+	    var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+		color: 0x00ff00
+	    }));
+	}
 	node.material.ambient = node.material.color;
 	if(pos){
 	    node.position.copy(pos);
@@ -317,15 +338,24 @@ function init() {
     }
 
     function pidData(pid){
+	console.log(source);
 	for(var i = 0; i<source.length; i++){
 	    var ps = source.processes[i];
 	    if(ps["pid"] === pid){
 		console.log(ps["pid"]);
+		var proc_type;
+		if(ps["argv"] == "") {
+		    proc_type ="[Dormant Process]";
+		}
+		else{
+		    proc_type = ps["argv"].join(" ").replace(","," ");
+		}
 		var html = "Memory : "+ Math.round(ps["mem_stats"][0].size/1024) + " mB <br/>" +
-		    "Command :" + ps["argv"].join(" ").replace(","," ")  + " <br/>" +
+		    "pid :" + ps["process_stats"][0].pid + " "+ ps["process_stats"][0].comm + "<br/>" +
+		    "Command : " + proc_type  + " <br/>" +
 		    "Resident set memory size: "+ Math.round(ps["process_stats"][0].rss) + " kB <br/>";
 							     
-		appendHTML(html, "pid", { top: "90px", left: "50px", constant: "false"});
+		appendHTML(html, "pid", { top: "90px", left: "50px"});
 	    }
 	}
     }
