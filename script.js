@@ -37,10 +37,7 @@ var getData = function(res){
 var getStat = function(pid){
     var deferred = q.defer();
     var process = procfs(pid);
-    var proces  = [];
-    var memory = []
-    var cwd = [];
-    var argv = [];
+    var  proces  = [], memory = [], cwd = [], argv = [];
     process.statm(function(err, data){
 	memory.push(data);
     });
