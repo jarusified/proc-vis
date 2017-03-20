@@ -165,8 +165,10 @@ function init() {
     var lines = [];
 
     var socket = io();
-    var source;
+    var source = [];
     socket.on('position',function(data){
+	//	 scene.remove();
+	source = [];
 	process(data);
 	source = data;
 	appendHTMLforever("Number of proceses : "+ source.length + "<br/>", "pcount", { top : "70px", left : "50px" });
@@ -251,28 +253,33 @@ function init() {
 	    var scaled_mem = memory/scale;
 	    var pid = data.processes[i]["pid"];
 	    if(memory != undefined && memory!= null ){
-//		console.log(data.processes[i]["argv"].join(" "));
-//		console.log(data.processes[i]["pid"] +":"+ data.processes[i]["mem_stats"][0]["size"]/1024);
+		var state = data.processes[i]["process_stats"][0]["state"];
+		var sudo = false;
+		if(data.processes[i]["argv"][0][0] === "sudo"){
+		    sudo = true;
+		}
 		if(memory==0){
-		    console.log("asddds");
-		    node = addNode(pid, memory, new THREE.Vector3(0.1*Math.random()*lineDistance*Math.cos(120), - 0.1*lineDistance*Math.cos(120),0.1*Math.random()*lineDistance*Math.sin(120)));
+		    node = addNode(pid, memory, state, sudo, new THREE.Vector3(0.1*Math.random()*lineDistance*Math.cos(120),  -0.03*lineDistance*Math.cos(120),0.1*Math.random()*lineDistance*Math.sin(120)));
 		}
 		else{
-		    node = addNode(pid,memory, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
+		    node = addNode(pid,memory, state, sudo, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
 		}
 	    };
 	}
     }
     
     function addLine(from, to, clr, name){	
+	console.log(from, to);
 	var geometry = new THREE.Geometry();
 	geometry.vertices.push(
 	    new THREE.Vector3(from.x, from.y, from.z),
 	    new THREE.Vector3(to.x, to.y, to.z)
 	);
 	geometry.computeLineDistances();
-	lineDistance = geometry.lineDistances[1];
-	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0}));
+	if(name != "sudo"){
+	    lineDistance = geometry.lineDistances[1];
+	}
+	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0, lineWidth: 4}));
 	line.title = "axis";
 	line.name = name;
 	eventsControl.attach(line);
@@ -302,31 +309,51 @@ function init() {
 	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff, "User3");
     }
 
-    function addNode(pid, mem,  pos){
+    function addNode(pid, mem, state, sudo, pos){
 	nodeCount++;
-	console.log(mem);
+	var state_factor;
+	if(sudo){
+	    var sudo_sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	    var sudo_node = new THREE.Mesh(sudo_sphereGeometry, new THREE.MeshLambertMaterial({
+		color: state_factor * 0xff0000
+	    }));
+	    sudo_node.material.ambient = sudo_node.material.color;
+	    sudo_node.position.x = 0;
+	    sudo_node.position.y = - pos.y;
+	    sudo_node.position.z = 0;
+	    sudo_node.castshadow = true;
+	    sudo_node.receiveshadow = true;
+	    sudo_node.title = "root_pid";
+	    scene.add(sudo_node);
+	}
+	if(state == "R") { state_factor = 1;}
+	else if(state == "S" || state == "D")  { state_factor = 0.4; }
+	else if(state == "Z") { state_factor = 0.6; }
+	else { state_factor = 0; }
 	if(mem == 0){
 	    var sphereGeometry = new THREE.SphereGeometry(1,0,0);
 	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
-		color: 0x0000ff
+		color: state_factor * 0x0000ff
 	    }));
 	}
 	else if(mem >102400){
 	    var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
 	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
-		color: 0xff0000
+		color: state_factor * 0xff0000
 	    }));
 	}
 	else{
 	    var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
 	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
-		color: 0x00ff00
+		color: state_factor * 0x00ff00
 	    }));
 	}
 	node.material.ambient = node.material.color;
 	if(pos){
+	    console.log(pos);
 	    node.position.copy(pos);
 	}
+
 	node.castshadow = true;
 	node.receiveshadow = true;
 	//if(nodeCount < 2) append3DHTML(pid, pos);
@@ -334,6 +361,9 @@ function init() {
 	node.name = pid;
 	eventsControl.attach(node);
 	scene.add(node);
+	if(sudo){
+	    addLine({ x: pos.x, y: pos.y, z: pos.z},{ x: 0, y: - pos.y, z: 0 }, 0xff0000, "sudo");
+	}
 	return node;
     }
 
@@ -342,7 +372,6 @@ function init() {
 	for(var i = 0; i<source.length; i++){
 	    var ps = source.processes[i];
 	    if(ps["pid"] === pid){
-		console.log(ps["pid"]);
 		var proc_type;
 		if(ps["argv"] == "") {
 		    proc_type ="[Dormant Process]";
@@ -353,7 +382,11 @@ function init() {
 		var html = "Memory : "+ Math.round(ps["mem_stats"][0].size/1024) + " mB <br/>" +
 		    "pid :" + ps["process_stats"][0].pid + " "+ ps["process_stats"][0].comm + "<br/>" +
 		    "Command : " + proc_type  + " <br/>" +
-		    "Resident set memory size: "+ Math.round(ps["process_stats"][0].rss) + " kB <br/>";
+		    "Number of threads: " + ps["process_stats"][0].num_threads + "<br/>" +
+		    "Resident set memory size: "+ Math.round(ps["process_stats"][0].rss) + " kB <br/>" +
+		    "Virtual Memry size: "+ Math.round(ps["process_stats"][0].vsize/(1024*1024)) + " mB </br>" +
+		    "State of process: "+ ps["process_stats"][0].state + "<br/>"
+		;
 							     
 		appendHTML(html, "pid", { top: "90px", left: "50px"});
 	    }
