@@ -6,6 +6,7 @@ var ps = require("ps-list");
 var procfs = require("procfs-stats");
 var process = require("process");
 var port = process.env.PORT|| 8080;
+var q = require("q");
 
 var mimeTypes = {
     "html": "text/html",
@@ -15,29 +16,63 @@ var mimeTypes = {
     "js": "text/javascript",
     "css": "text/css"};
 
-var processList = [];
-ps().then(function(res){
-    for(var i = 0; i < res.length; i++){
-	processList.push(res[i].pid);
-    }
-    getStats(processList)
-});
+var pidList = [];
+var pidData = {};
 
-function getStats(pids){
-    for(var pid = 0; pid < 3; pid++){
-	var process = procfs(pids[pid]);
-	process.statm(function(err, data){
-	   //console.log(data);
+var getData = function(res){
+    var deferred = q.defer();
+    pidData.length = res.length;
+    pidData.processes = [];
+    i = 0;
+    while(i<res.length){
+	getStat(res[i].pid).then(function(){
+	    
 	});
+	i++;
     }
+    deferred.resolve(pidData);
+    return deferred.promise;
 }
 
+var getStat = function(pid){
+    var deferred = q.defer();
+    var process = procfs(pid);
+    var  proces  = [], memory = [], cwd = [], argv = [];
+    process.statm(function(err, data){
+	memory.push(data);
+    });
+    process.stat(function(err,data){
+	proces.push(data);
+    });
+    process.cwd(function(err, data){
+	cwd.push(data);
+    });
+    process.argv(function(err, data){
+	argv.push(data);
+    });
+    pidData.processes.push({pid: pid, argv: argv, mem_stats: memory, process_stats: proces, dir: cwd});
+    deferred.resolve();
+    return deferred.promise;
+}
+
+var monitor = function(){
+    ps().then(function(res){
+	console.log("entry");
+	getData(res).then(function(data){
+	    io.sockets.on('connection', function (socket) {
+		io.sockets.emit('position', data);
+	    });
+	    console.log("resolved");
+	});
+    });
+}
+
+setInterval(monitor, 5000);
 
 var server = http.createServer(function(req, res){
     // Wow never use res.write without headers
     var uri = url.parse(req.url).pathname
     var filename = path.join(process.cwd(), uri);
-    console.log(filename);
     fs.exists(filename, function(exists){
 	if(!exists){
 	    console.log("[404]" + filename);
@@ -55,13 +90,6 @@ var server = http.createServer(function(req, res){
 
 var io = require("socket.io").listen(server, {log: true});
 
-var data = {x:30, y:30};
-io.sockets.on('connection', function (socket) {
-    console.log("asd");
-    io.sockets.emit('position', { x:30, y:30});
-});
 
 setTimeout(function(){
-    console.log("timeout");
-    io.sockets.emit('position', { x:30, y:30});
 },3000);

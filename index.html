@@ -1,6 +1,5 @@
 <html>
-  <meta charset="utf-8">
-  <link rel="icon" href="data:;base64,=">
+<head> <title> Procvis </title> </head>   
 <style>
 
 .link {
@@ -20,24 +19,29 @@
 <script src="DragControls.js"></script>
 <script src="OrbitControls.js"></script>
 <script src="TransformControls.js"></script>
+<script src="EventsControls.js"></script>
 <script>
 
 		
 var container;
 var camera, scene, renderer;
 var positions = [];
-
+var lineDistance;
 var structure = new THREE.BoxGeometry( 20, 20, 20 );
+var pidText = document.createElement('canvas');
+pidText.width = 16;
+pidText.height = 16;
+var content = document.createElement("div");
 
 init();
 animate();
 
 function init() {
-    container = document.createElement( 'div' );
+    container = document.createElement('div');
     document.body.appendChild( container );
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
-    camera.position.set( 70, 30, 30 );
+    camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.01, 10000 );
+    camera.position.set( 50, 10, 35 );
     scene.add( camera );
 
     scene.add( new THREE.AmbientLight( 0x2c9ada ) );
@@ -51,9 +55,7 @@ function init() {
     scene.add( light );
     spotlight = light;
 
-    // scene.add( new THREE.CameraHelper( light.shadow.camera ) );
-
-    var planeGeometry = new THREE.PlaneGeometry( 2000, 2000 );
+    var planeGeometry = new THREE.PlaneGeometry( 4000, 4000 );
     planeGeometry.rotateX( - Math.PI / 2 );
     var planeMaterial = new THREE.ShadowMaterial();
     planeMaterial.opacity = 0.2;
@@ -61,9 +63,10 @@ function init() {
     var plane = new THREE.Mesh( planeGeometry, planeMaterial );
     plane.position.y = -200;
     plane.receiveShadow = true;
+    plane.name = "Plane";
     scene.add( plane );
-
-    var helper = new THREE.GridHelper( 2000, 100 );
+    
+    var helper = new THREE.GridHelper( 4000, 100 );
     helper.position.y = - 199;
     helper.material.opacity = 0.25;
     helper.material.transparent = true;
@@ -73,7 +76,6 @@ function init() {
     axis.position.set( -500, -500, -500 );
     scene.add( axis );
 
-    
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setClearColor( 0xf0f0f0 );
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -81,32 +83,36 @@ function init() {
     renderer.shadowMap.enabled = true;
     container.appendChild( renderer.domElement );
 
-    // Controls
     controls = new THREE.OrbitControls( camera, renderer.domElement );
     controls.damping = 0.2;
+    controls.rotateSpeed = 1;
+    controls.zoomSpeed = 1.2;
+    controls.staticMoving = true;
+    controls.minPolarAngle = Math.PI / 2;
+    controls.maxPolarAngle = Math.PI / 2;
     controls.addEventListener( 'change', render );
 
+    var eventsControl = new EventsControls(camera, renderer.domElement);
+    plane.title = "mesh";
+    plane.name = "plane";
+    eventsControl.attach(plane);
+    eventsControl.map = plane;
+    eventsControl.offsetUse = true;
+
+    eventsControl.attachEvent("onclick", function(){
+	var title = this.focused.title;
+	if(title === "axis"){
+	    userData(this.focused.name);
+	}
+	else if(title === "pid"){
+	    pidData(this.focused.name);
+	}
+    });
+    
     transformControl = new THREE.TransformControls( camera, renderer.domElement );
     transformControl.addEventListener( 'change', render );
     scene.add( transformControl );
 
-    var material = new THREE.SpriteMaterial( {
-	color: 0xff00ff,
-    });
-    
-    var structure = new THREE.Geometry();
-
-    particle = new THREE.Sprite(material);
-    particle.position.set(50,50,90);
-    scene.add(particle);
-
-    structure.vertices.push(particle.position);
-
-    var curve = new THREE.CatmullRomCurve3(positions);
-    curve.type = 'catmullrom';
-    var line = new THREE.Line( structure, new THREE.LineBasicMaterial( { color: 0x000000, opacity: 0.5, linewidth: 2 } ) );
-    scene.add(line);
-    
     transformControl.addEventListener('change',function(e){
 	cancelHideTransorm();
     });
@@ -121,7 +127,7 @@ function init() {
     } );
 
     var splineHelperObjects = [];
-    var dragcontrols = new THREE.DragControls( splineHelperObjects, camera, renderer.domElement ); //
+    var dragcontrols = new THREE.DragControls( splineHelperObjects, camera, renderer.domElement ); 
     dragcontrols.enabled = false;
     dragcontrols.addEventListener( 'hoveron', function ( event ) {
 	transformControl.attach( event.object );
@@ -154,27 +160,132 @@ function init() {
 	if ( hiding ) clearTimeout( hiding );
     }
 
-    //addNode();
-    addBase(500);
+    addBase(1000);
     var nodeCount = 0;
     var lines = [];
 
     var socket = io();
+    var source = [];
     socket.on('position',function(data){
-	console.log(data);
+	//	 scene.remove();
+	source = [];
+	process(data);
+	source = data;
+	appendHTMLforever("Number of proceses : "+ source.length + "<br/>", "pcount", { top : "70px", left : "50px" });
     });
 
-    function addLine(from, to, clr){	
+    function appendHTML(html, id, css){
+	content.innerHTML = "";
+	content.id = id;
+	content.style.position = "absolute";
+	content.style.top =  css.top;
+	content.style.left = css.left;
+	content.innerHTML = html;
+	console.log("html:", html);
+	container.appendChild(content);
+    }
+
+    function appendHTMLforever(html, id, css){
+	var freeze = document.createElement("div");
+	freeze.id = id;
+	freeze.style.position = "absolute";
+	freeze.style.top =  css.top;
+	freeze.style.left = css.left;
+	freeze.innerHTML = html;
+	container.appendChild(freeze);
+    }
+
+    function roundRect(ctx, x, y, w, h, r){
+	ctx.beginPath();
+	ctx.moveTo(x+r, y);
+	ctx.lineTo(x+w-r, y);
+	ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+	ctx.lineTo(x+w, y+h-r);
+	ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+	ctx.lineTo(x+r, y+h);
+	ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+	ctx.lineTo(x, y+r);
+	ctx.quadraticCurveTo(x, y, x+r, y);
+	ctx.closePath();
+	ctx.fill();
+	ctx.stroke();
+    }
+    
+    
+    function makeTextSprite( message, parameters ){
+	if ( parameters === undefined ) parameters = {};
+	var fontface = parameters.hasOwnProperty("fontface") ?
+	    parameters["fontface"] : "Arial";
+	var fontsize = parameters.hasOwnProperty("fontsize") ?
+	    parameters["fontsize"] : 18;
+	var backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
+	    parameters["backgroundColor"] : { r:255, g:255, b:255, a:1.0 };;
+	var canvas = document.createElement('canvas');
+	var context = canvas.getContext('2d');
+	context.font = "Bold " + fontsize + "px " + fontface;
+	var metrics = context.measureText( message );
+	var textWidth = metrics.width;
+	context.fillStyle   = "rgba(" + backgroundColor.r + "," + backgroundColor.g + ","
+	    + backgroundColor.b + "," + backgroundColor.a + ")";
+	roundRect(context, 0, 0, textWidth, fontsize * 1.4, 6);
+	context.fillStyle = "rgba(0, 0, 0, 1.0)";
+	context.fillText( message, 0, fontsize);
+	var texture = new THREE.Texture(canvas)
+	texture.needsUpdate = true;
+	var spriteMaterial = new THREE.SpriteMaterial(
+	    { map: texture, useScreenCoordinates: true } );
+	var sprite = new THREE.Sprite( spriteMaterial );
+	sprite.scale.set(100,50,1.0);
+	return sprite;
+    }
+    
+    function append3DHTML(text, pos){
+	var spritey = makeTextSprite( text, { fontsize: 12, fontface: "Georgia", borderColor: {r:0, g:0, b:255, a:1.0} } );
+	spritey.position.set(0, pos.y, pos.z);
+	scene.add( spritey );
+    }
+
+    function process(data){
+	var node;
+	for(var i=0; i<data.length; i++){
+	    var memory = data.processes[i]["mem_stats"][0]["size"];
+	    var scale = (1024*1024)*Math.exp(1);
+	    var scaled_mem = memory/scale;
+	    var pid = data.processes[i]["pid"];
+	    if(memory != undefined && memory!= null ){
+		var state = data.processes[i]["process_stats"][0]["state"];
+		var sudo = false;
+		if(data.processes[i]["argv"][0][0] === "sudo"){
+		    sudo = true;
+		}
+		if(memory==0){
+		    node = addNode(pid, memory, state, sudo, new THREE.Vector3(0.1*Math.random()*lineDistance*Math.cos(120),  -0.03*lineDistance*Math.cos(120),0.1*Math.random()*lineDistance*Math.sin(120)));
+		}
+		else{
+		    node = addNode(pid,memory, state, sudo, new THREE.Vector3( scaled_mem*lineDistance*Math.cos(120), -0.3*scaled_mem*lineDistance*Math.cos(120),scaled_mem*lineDistance*Math.sin(120)));
+		}
+	    };
+	}
+    }
+    
+    function addLine(from, to, clr, name){	
+	console.log(from, to);
 	var geometry = new THREE.Geometry();
 	geometry.vertices.push(
 	    new THREE.Vector3(from.x, from.y, from.z),
 	    new THREE.Vector3(to.x, to.y, to.z)
 	);
 	geometry.computeLineDistances();
-	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0}));
+	if(name != "sudo"){
+	    lineDistance = geometry.lineDistances[1];
+	}
+	var line = new THREE.LineSegments(geometry, new THREE.LineDashedMaterial({ color: clr, gapSize: 0, lineWidth: 4}));
+	line.title = "axis";
+	line.name = name;
+	eventsControl.attach(line);
 	scene.add(line);
     }
-
+    
     function strtoobj(str){
 	var props = str.split(",");
 	var obj = {};
@@ -192,35 +303,97 @@ function init() {
 	for(var i=0;i<users;i++){
 	    angle.push(i*(360/users));
 	}
-	var basez = 200;
-	addLine(strtoobj("0, 0, 0"), strtoobj("0,"+h+",0"), 0x000000);
-	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[0])+","+ -0.3*h+ ","+ -h*Math.sin(angle[0])), 0xff00aa);
-	addLine(strtoobj("0, 0, 0"), strtoobj( h*Math.cos(angle[1])+","+ -0.3*h+ ","+  h*Math.sin(angle[1])), 0xaa00ff);
-	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff);
+	addLine(strtoobj("0, 0, 0"), strtoobj("0,"+h+",0"), 0x000000, "ROOT");
+	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[0])+","+ -0.3*h+ ","+ -h*Math.sin(angle[0])), 0xff00aa, "User1");
+	addLine(strtoobj("0, 0, 0"), strtoobj( h*Math.cos(angle[1])+","+ -0.3*h+ ","+  h*Math.sin(angle[1])), 0xaa00ff, "User2");
+	addLine(strtoobj("0, 0, 0"), strtoobj(-h*Math.cos(angle[2])+","+ -0.3*h+ ","+ -h*Math.sin(angle[2])), 0x00aaff, "User3");
     }
 
-    function addNode(pos){
+    function addNode(pid, mem, state, sudo, pos){
 	nodeCount++;
-	var node = new THREE.Mesh(structure, new THREE.MeshLambertMaterial({
-	    color: Math.random()* 0xffffffff
-	}));
-	node.material.ambient = node.material.color;
-	if(pos){
-	    node.position.copy(pos);
+	var state_factor;
+	if(sudo){
+	    var sudo_sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	    var sudo_node = new THREE.Mesh(sudo_sphereGeometry, new THREE.MeshLambertMaterial({
+		color: state_factor * 0xff0000
+	    }));
+	    sudo_node.material.ambient = sudo_node.material.color;
+	    sudo_node.position.x = 0;
+	    sudo_node.position.y = - pos.y;
+	    sudo_node.position.z = 0;
+	    sudo_node.castshadow = true;
+	    sudo_node.receiveshadow = true;
+	    sudo_node.title = "root_pid";
+	    scene.add(sudo_node);
+	}
+	if(state == "R") { state_factor = 1;}
+	else if(state == "S" || state == "D")  { state_factor = 0.4; }
+	else if(state == "Z") { state_factor = 0.6; }
+	else { state_factor = 0; }
+	if(mem == 0){
+	    var sphereGeometry = new THREE.SphereGeometry(1,0,0);
+	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+		color: state_factor * 0x0000ff
+	    }));
+	}
+	else if(mem >102400){
+	    var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+		color: state_factor * 0xff0000
+	    }));
 	}
 	else{
-	    node.position.x = Math.random()*1000 -500;
-	    node.position.y = Math.random()*600;
-	    node.position.z = Math.random()*700 - 400;
+	    var sphereGeometry = new THREE.SphereGeometry(mem/102400,0,0);
+	    var node = new THREE.Mesh(sphereGeometry, new THREE.MeshLambertMaterial({
+		color: state_factor * 0x00ff00
+	    }));
 	}
+	node.material.ambient = node.material.color;
+	if(pos){
+	    console.log(pos);
+	    node.position.copy(pos);
+	}
+
 	node.castshadow = true;
 	node.receiveshadow = true;
+	//if(nodeCount < 2) append3DHTML(pid, pos);
+	node.title = "pid";
+	node.name = pid;
+	eventsControl.attach(node);
 	scene.add(node);
+	if(sudo){
+	    addLine({ x: pos.x, y: pos.y, z: pos.z},{ x: 0, y: - pos.y, z: 0 }, 0xff0000, "sudo");
+	}
 	return node;
     }
 
+    function pidData(pid){
+	console.log(source);
+	for(var i = 0; i<source.length; i++){
+	    var ps = source.processes[i];
+	    if(ps["pid"] === pid){
+		var proc_type;
+		if(ps["argv"] == "") {
+		    proc_type ="[Dormant Process]";
+		}
+		else{
+		    proc_type = ps["argv"].join(" ").replace(","," ");
+		}
+		var html = "Memory : "+ Math.round(ps["mem_stats"][0].size/1024) + " mB <br/>" +
+		    "pid :" + ps["process_stats"][0].pid + " "+ ps["process_stats"][0].comm + "<br/>" +
+		    "Command : " + proc_type  + " <br/>" +
+		    "Number of threads: " + ps["process_stats"][0].num_threads + "<br/>" +
+		    "Resident set memory size: "+ Math.round(ps["process_stats"][0].rss) + " kB <br/>" +
+		    "Virtual Memry size: "+ Math.round(ps["process_stats"][0].vsize/(1024*1024)) + " mB </br>" +
+		    "State of process: "+ ps["process_stats"][0].state + "<br/>"
+		;
+							     
+		appendHTML(html, "pid", { top: "90px", left: "50px"});
+	    }
+	}
+    }
+    appendHTMLforever("Process Visualisation","title", { top : "50px", left: "50px" });
 }
-
 
 function animate() {
     requestAnimationFrame( animate );
@@ -233,6 +406,6 @@ function render() {
     renderer.render( scene, camera );
 }
 
-	</script>
+</script>
 </body>
 </html>
